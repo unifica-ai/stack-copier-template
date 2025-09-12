@@ -1,0 +1,4 @@
+{# Odoo version formatted without dot #}
+{%- macro version_major(odoo_version) %}
+    {{- "%.0f"|format(odoo_version) }}
+{%- endmacro %}

@@ -1,0 +1,27 @@
+# Configure jinja2 defaults to make syntax highlighters lives easier
+_templates_suffix: .jinja
+
+# Other Copier configurations
+_min_copier_version: "9"
+_exclude:
+  - /.git
+  - _macros
+  - /**.pyc
+  - /**.pyo
+  - /CONTRIBUTING.md
+  - /copier.yml
+
+# Questions for the user
+stack_name:
+  help: What is the name of this stack? (Usually the customer name.)
+  type: str
+  default: cliente-x
+
+odoo_version:
+  help: On which odoo version is it based?
+  type: float
+  default: 18.0
+  choices:
+    - 16.0
+    - 17.0
+    - 18.0
