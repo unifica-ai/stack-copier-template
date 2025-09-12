@@ -10,6 +10,7 @@ _exclude:
   - /**.pyo
   - /CONTRIBUTING.md
   - /copier.yml
+  - README.md
 
 # Questions for the user
 stack_name:

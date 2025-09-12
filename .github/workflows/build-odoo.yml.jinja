@@ -60,7 +60,7 @@ jobs:
       - name: Set up SSH keys
         run: |
           mkdir -p ./odoo/custom/ssh/
-          echo {% raw %}$"{{ secrets.ALY_WEB_2509 }}"{% endraw %} > ./odoo/custom/ssh/aly-web-2509
+          echo {% raw %}"${{ secrets.ALY_WEB_2509 }}"{% endraw %} > ./odoo/custom/ssh/aly-web-2509
           chmod 600 ./odoo/custom/ssh/aly-web-2509
 
       - name: Build and push Docker image
