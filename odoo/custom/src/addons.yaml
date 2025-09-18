@@ -1,0 +1,13 @@
+server-tools:
+  - sentry
+
+website:
+  - website_odoo_debranding
+
+server-brand:
+  - portal_odoo_debranding
+  - remove_odoo_enterprise
+  - disable_odoo_online
+
+aly-web:
+  - aly_ui

@@ -1,0 +1,5 @@
+aly-web:
+  remotes:
+    origin: git@github.com-aly-web:unifica-ai/aly-web.git
+  merges:
+    - origin main
