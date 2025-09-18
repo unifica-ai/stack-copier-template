@@ -12,6 +12,7 @@ _exclude:
   - /copier.yml
   - README.md
   - /odoo/custom/src/_repos.yaml
+  - _tasks.yml
 
 # Questions for the user
 stack_name:
@@ -27,7 +28,3 @@ odoo_version:
     - 16.0
     - 17.0
     - 18.0
-
-# This is not idempotent or good
-_tasks:
-    - cat odoo/custom/src/_repos.yaml >> odoo/custom/src/repos.yaml

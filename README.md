@@ -15,8 +15,19 @@ copier copy --answers-file=.copier-answers-stack.yml update .
 
 ## Manual touch up:
 
-Add to `smtpreal` in `common.yaml`:
+1. Add to `smtpreal` in `common.yaml`:
 
 ```
 - ./config/user-patches.sh:/tmp/docker-mailserver/user-patches.sh:ro
 ```
+
+2. Append =odoo/custom/src/_repos.yml= to =odoo/custom/src/repos.yml=
+
+ TODO replace this file with a jinja template, variable, and loop
+ 
+3. Append _tasks.py to tasks.py
+
+TODO find a better way to do this, maybe via a task
+
+4. 
+
