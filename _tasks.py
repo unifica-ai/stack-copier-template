@@ -1,5 +1,5 @@
 @task
-def install_all_addons(c):
+def install_all_addons(c, database="devel"):
     """Install all addons mentioned in addons.yaml."""
     # Read addons.yaml to get all addons
     addons_path = Path(SRC_PATH, "addons.yaml")
@@ -16,7 +16,9 @@ def install_all_addons(c):
 
     # Build the command
     cmd = (
-        f"{DOCKER_COMPOSE_CMD} run --rm odoo --stop-after-init -i {modules_str}"
+        f"{DOCKER_COMPOSE_CMD} run --rm odoo --stop-after-init "
+        f"-d {database} "
+        f"-i {modules_str}"
     )
 
     with c.cd(str(PROJECT_ROOT)):
@@ -25,3 +27,4 @@ def install_all_addons(c):
             env=UID_ENV,
             pty=True,
         )
+        
