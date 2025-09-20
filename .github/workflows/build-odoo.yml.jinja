@@ -76,5 +76,5 @@ jobs:
           build-args: |
             UID=1000
             GID=1000
-            DB_VERSION=16
-            ODOO_VERSION=16.0
+            DB_VERSION={{ postgres_version }}
+            ODOO_VERSION={{ macros.version_minor(odoo_version) }}

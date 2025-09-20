@@ -18,7 +18,7 @@ _exclude:
 stack_name:
   help: What is the name of this stack? (Usually the customer name.)
   type: str
-  default: cliente-x
+  default: decomovil
 
 odoo_version:
   help: On which odoo version is it based?
@@ -28,3 +28,23 @@ odoo_version:
     - 16.0
     - 17.0
     - 18.0
+    - 19.0
+
+# Copied from doodba version
+# TODO turn this into a macro which reads existing .copier-answers.yml
+# and reuses the same 
+postgres_version:
+  default: "17"
+  help: >-
+    Remind me which Postgres version we are using?
+  choices:
+    I will use an external PostgreSQL server: ""
+    "9.6": "9.6"
+    "10": "10"
+    "11": "11"
+    "12": "12"
+    "13": "13"
+    "14": "14"
+    "15": "15"
+    "16": "16"
+    "17": "17"

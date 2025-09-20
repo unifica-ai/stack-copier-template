@@ -2,3 +2,8 @@
 {%- macro version_major(odoo_version) %}
     {{- "%.0f"|format(odoo_version) }}
 {%- endmacro %}
+
+{# Odoo version formatted with one single dot #}
+{%- macro version_minor(odoo_version) %}
+    {{- "%.1f"|format(odoo_version) }}
+{%- endmacro %}
