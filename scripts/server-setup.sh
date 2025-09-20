@@ -2,8 +2,11 @@
 set -x
 set -e
 
-APP="myapp" # change to match repository
-USE_TAILSCALE=true
+USE_TAILSCALE=""
+
+if [ $# -gt 1 ] && [ "$1" == "--use-tailscale" ]; then
+    USE_TAILSCALE="yes"
+fi
 
 # Wait for any apt processes to finish
 echo "Waiting for apt to finish..."
@@ -14,22 +17,25 @@ done
 # Update system
 apt-get update && apt-get upgrade -y
 
-# https://linuxiac.com/how-to-install-docker-on-debian-12-bookworm/
-apt install -y apt-transport-https ca-certificates curl gnupg ufw
+# https://docs.docker.com/engine/install/debian/
+apt install -y ca-certificates curl gnupg
 
 # Add Docker’s GPG Repo Key
 curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker.gpg
 
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker.gpg] https://download.docker.com/linux/debian bookworm stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker.gpg] https://download.docker.com/linux/debian $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
 apt-get update
 
-sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
 # should be able to do 'docker run hello-world' at this point
 
 useradd -m -s /bin/bash app
 usermod -aG docker app
+mkdir -m 700 -p /home/app/.ssh
+cp /home/admin/.ssh/authorized_keys /home/app/.ssh
+chown -R app:app /home/app/.ssh
 
 set_up_uv() {
   cd
@@ -43,25 +49,8 @@ set_up_git() {
   git config --global init.defaultBranch main
 }
 
-set_up_app () {
-   local appname=$1
-   local dir=${2:-$HOME}
-   echo "setting up $appname"
-  cd
-  mkdir -p $appname/repo.git
-  cd $appname/repo.git
-  git init --bare
-  cat > hooks/post-receive << EOD
-#!/usr/bin/env bash
-echo "Deploying!"
-git --work-tree=$dir/$appname --git-dir=$dir/$appname/repo.git checkout -f
-EOD
-  chmod +x hooks/post-receive
-}
-
 sudo -u app bash -c "$(declare -f set_up_uv); set_up_uv"
 sudo -u app bash -c "$(declare -f set_up_git); set_up_git"
-sudo -u app bash -c "$(declare -f set_up_app); set_up_app $APP"
 
 ### Firewall
 
