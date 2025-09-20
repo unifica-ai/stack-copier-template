@@ -12,7 +12,7 @@ _exclude:
   - /copier.yml
   - README.md
   - /odoo/custom/src/_repos.yaml
-  - _tasks.yml
+  - _tasks.py
 
 # Questions for the user
 stack_name:
