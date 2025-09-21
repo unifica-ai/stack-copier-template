@@ -29,5 +29,10 @@ copier copy --answers-file=.copier-answers-stack.yml update .
 
 TODO find a better way to do this, maybe via a task
 
-4. 
+4. Update `smtpreal` in `common.yaml`:
+ 
+ ENABLE_SRS: 0
+ 
+ 
+5. Run the stack-post-create script
 
