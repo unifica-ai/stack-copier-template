@@ -52,6 +52,12 @@ set_up_git() {
 sudo -u app bash -c "$(declare -f set_up_uv); set_up_uv"
 sudo -u app bash -c "$(declare -f set_up_git); set_up_git"
 
+# SOPS
+
+curl -LO https://github.com/getsops/sops/releases/download/v3.10.2/sops_3.10.2_amd64.deb
+
+sudo dpkg -i sops_3.10.2_amd64.deb
+
 ### Firewall
 
 [ -n "$USE_TAILSCALE" ] && {
