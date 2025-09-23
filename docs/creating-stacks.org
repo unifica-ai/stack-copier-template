@@ -1,4 +1,4 @@
-#+title:      Managing Aly Instances
+#+title:      Creación de Stacks
 #+date:       [2025-09-12 Fri 19:19]
 #+filetags:   :aly:
 #+identifier: 20250912T191926
@@ -10,10 +10,10 @@ Este documento es es para el equipo técnico de Aly.
 * Resumen ejecutivo
 
 Revisamos operaciones basicas con stacks de Aly Suite
-- Lanzar un "stack" para cliente nuevo
-- Correr en entorno de desarrollo
-- Crear un stack de UAT
-- Migrar un cliente de un stack a otro
+1. Lanzar un "stack" para cliente nuevo
+2. Correr en entorno de desarrollo
+3. Crear un stack de UAT
+4. Lanzar a producción
   
 * Introduccion
 
@@ -31,7 +31,7 @@ La instancia de Alex estará en: =decomovil.aly-ai.com=
 
 Clientes de Aly típicamene accesan a la herramienta en subdominio de aly-ai.com, como =cliente-x.aly-ai.com=). Sin embargo, la manera como se despliega cada cliente varía, dependiendo de ciertos factores:
 
-1. **Operativos**: en la naturaleza del necio. (Clientes concurrentes, volumen, variedad y velocidad de su informacion.)
+1. **Operativos**: en la naturaleza del servicio. (Clientes concurrentes, volumen, variedad y velocidad de su informacion.)
 
 2. **Desarrollo**: dependencias modulares (npm, apt, python) y desarrollos a la medida.
 
@@ -99,11 +99,11 @@ Una vez construido, se sube a Github Container Registry, listo para ser descarga
 
 * Creando un stack
 
-En este ejercicio, vamos a crear el stack =admin.aly-ai.com=.
+En este ejercicio, vamos a crear un stack single-tenant para  =decomovil.aly-ai.com=.
 
 ** Requerimientos
 
-Ver rquieremientos de [[https://github.com/tecnativa/doodba][Doodba]].
+Ver rquieremientos de [[https://github.com/Tecnativa/doodba-copier-template/?tab=readme-ov-file#install-the-dependencies][Doodba Copier Template]].
 
 Adicionalmente, para terminar el deployment:
 
@@ -278,7 +278,7 @@ inv install-all-addons
 inv start  
 #+end_src
 
-Deberias poder entrar a =localhost:8069= y entrar con =admin= / =adimn=.
+Deberias poder entrar a =localhost:16069= y entrar con =admin= / =adimn=.
 
 ** Revisar build + pin docker tag
 
@@ -554,5 +554,4 @@ Invitar a usuario de UAT y conseguir aprobacion de este nuevo stack.
 Revisar
 - funcionalidad basica
 - templates de correos con Mailhog
-- etc.  
-
+- etc.
