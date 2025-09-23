@@ -1,0 +1,558 @@
+#+title:      Managing Aly Instances
+#+date:       [2025-09-12 Fri 19:19]
+#+filetags:   :aly:
+#+identifier: 20250912T191926
+
+* Público
+
+Este documento es es para el equipo técnico de Aly.
+
+* Resumen ejecutivo
+
+Revisamos operaciones basicas con stacks de Aly Suite
+- Lanzar un "stack" para cliente nuevo
+- Correr en entorno de desarrollo
+- Crear un stack de UAT
+- Migrar un cliente de un stack a otro
+  
+* Introduccion
+
+Lanzaremos la instancia =decomovil= de Aly.
+
+Decomovil es una compañía ficticia que ofrece servicios de remodelación para casas y oficinas.
+Alex, el dueño de Deco Movil, quiere usar Aly Suite para unificar sus procesos y la atención
+a sus clentes.
+
+La instancia de Alex estará en: =decomovil.aly-ai.com=
+
+* Preliminares
+
+** Que es un "stack"?
+
+Clientes de Aly típicamene accesan a la herramienta en subdominio de aly-ai.com, como =cliente-x.aly-ai.com=). Sin embargo, la manera como se despliega cada cliente varía, dependiendo de ciertos factores:
+
+1. **Operativos**: en la naturaleza del necio. (Clientes concurrentes, volumen, variedad y velocidad de su informacion.)
+
+2. **Desarrollo**: dependencias modulares (npm, apt, python) y desarrollos a la medida.
+
+Clientes grandes, con alta concurrencia de usuarios y código custom, típicamente tendrán su propia infraestructura, mientras que clienes pequeños utilizarán más infraestructura comparida. Esto permite mantener una calidad de servicio consistente mientras se mantiene el costo operativo y de alojamiento bajo.
+
+Decimos que clientes grandes estan eun "single tenant stack", y clientes pequeños en un "multi-tenant stack".
+
+|-------------------+------------------+---------------|
+| Modelo de tenancy | Cliente tipico   | Codigo custom |
+|-------------------+------------------+---------------|
+| single-tenant     | Mediano / grande | Si            |
+| multi-tenant      | Pequeño          | No            |
+|-------------------+------------------+---------------|
+
+Mantenemos un registro de los stacks esta en este doc:
+
+https://docs.google.com/spreadsheets/d/1Oxm5saKdICoH0Q6QheD8qgHXQBddit0gxMfmH6PG-jw
+
+** Instalación con Docker
+
+Utilizamos [[https://github.com/tecnativa/doodba][Docker Odoo Base]], con algunas modificaciones, para desplegar stacks con Docker.
+
+Una despliegue de odoo en Docker require al menos dos contenedores base:
+1. Aplicación de Odoo (Python)
+2. Base de datos (Postgres)
+
+Adicionalmente, para entorno de desarrollo:
+5. [[https://github.com/mailhog/MailHog][mailhog]] - preview correos localmente
+6. [[https://github.com/sosedoff/pgweb][pgweb]] para poder inspeccionar DB
+7. [[https://github.com/Kozea/wdb][wdb]]: debugger
+
+En producción, adicional a los contenedores base:
+3. backup: sube un dump de la DB y del Odoo Filestore a Amazon S3.
+4. email proxy: se encarga de enviar correo electrónico
+   
+En un stack multi-tenant, múltiples clientes comparten un contenedor de Docker y un contenedor de base de datos. En un stack single-tenant, cada cliente tiene sus propios contenedores de aplicación y DB.
+
+Varios stacks pueden estar instalados al mismo tiempo en un servidor.
+
+** Github: stack repos y module repos
+
+Cada stack tiene un repositorio de Github separado, al que le llamamos el "stack repo", por ejemplo:
+
+- =aly-alliedglobal= [ref], un /stack repo/ para Allied Global.
+- =aly-crm=, un stack repo para varios clientes con necesidades básicas.
+
+Estos repositorios contienen herramientas de desarrollo, testing y despliegue. El código de módulos está generalmente separado en "module repos", según su categoría o caso de uso, por ejemplo:
+
+- =aly-payments= [ref] (module repo para servicios de pagos)
+- =aly-web= [ref] (module repo para modificar el user interface)
+
+En algunos casos, un stack repo también puede alojar módulos directamente, en el directorio =odoo/custom/src/private=. Esto es especialmente útil para:
+
+1. Implementar funcionalidad custom del cliente.
+
+2. Iterar en código rápidamente en etapas tempranas, sin preocuparse de extraer el código a un repositorio separado. (Puede que no esté clara todavía la responsabilidad de un módulo que se esté creando, o dónde alojarlo a largo plazo.
+
+3. Aplicar un fix a un stack
+
+** Github Actions / Registries
+
+En cada stack repo, un worfklow de Github Actions instala los módulos que requiera, y los agrega a un contenedor de Docker nombrado =aly-suite-{version}-{stack_name}=, por ejemplo: =aly-suite-v16-crm=.
+
+Una vez construido, se sube a Github Container Registry, listo para ser descargado desde el servidor.
+
+* Creando un stack
+
+En este ejercicio, vamos a crear el stack =admin.aly-ai.com=.
+
+** Requerimientos
+
+Ver rquieremientos de [[https://github.com/tecnativa/doodba][Doodba]].
+
+Adicionalmente, para terminar el deployment:
+
+- Tailscale [ref]
+- Acceso a VPN de Unifica
+- Mozilla SOPS [ref] + age [ref] o rage [ref]
+- Private keys:
+  =aly-ai-2503= - para deploy el stack
+  =aly-web-2509= - deploy key para =aly-web=
+- Aly AI Cloudflare (para DNS)
+- Aly AI resend.com [ref] (para email)
+  
+Recomendado: =uv=. [ref]
+
+Instalar [[https://github.com/copier-org/copier][copier]], pre-commit [ref], e invoke [ref] con uv:
+
+#+begin_src 
+uv python install 3.10
+uv tool install pre-commit --python=3.10
+uv tool install copier --python=3.10
+uv tool install invoke --python=3.10  
+#+end_src
+
+** Copiando un template
+
+Enrar en un shell al directorio donde tenemos nuestros proyectos de desarrollo.
+(Podria ser =~/src=, =~/Projects=, etc.)
+
+(Remplazar =decomovil= por el nombre del stack.)
+
+#+begin_src python
+copier copy --UNSAFE gh:unifica-ai/doodba-copier-template aly-decomovil
+#+end_src
+
+[[https://copier.readthedocs.io/en/stable/][Copier]] nos hará una serie de preguntas:
+
+- Nombre de proyecto: =aly-decomovil=
+- Versión de Odoo: =16 - 18=
+- Dominios de producción y de pruebas
+  - =decomovil.aly-ai.com=
+  - =decomovil-test.aly-ai.com=
+    
+- Configuración de base de datos
+  - main database name:
+    single-tenant: prod
+    multi-tenant: decomovil
+  - db filter:
+    single-tenant: ^prod
+    multi-tenant: ^%d$
+
+- Servidores y direcciones de Correo electrónico
+
+  Crear un API Key en resend.com...
+  
+
+  - host: smtp.resend.com
+  - port: 465
+  - user: resend
+  - password: resend API Key
+  - docker-mailserver version: 15
+  - canonical domain: aly-ai.com
+  - other authorized domains: []
+          
+- Backups
+
+  - Bucket
+    boto3+s3://unifica-ai-odoo-backups/aly-decomovil
+  - Timezone
+    America/Guatemala
+  - Access Key ID + Secret: proporcionados por Unifica
+    
+Copier nos va a pedir también varias contraseñas. Estas deberán ser generadas con letras mayúsculas y minúsculas, números y símbolos, y por lo menos 16 caracteres.
+
+Ver =copier-answers.yml= [ref] para un ejemplo de las respuestas a dar.
+
+Al terminar de ejecutar, Copier nos mostrará una lista de los archivos que acaba de crear.
+
+** File tour
+
+La mayor parte de la configuración está en los siguientes archivos:
+
+- =common.yaml=: archivo de configuración compartida entre ambientes de desarrollo, pruebas y producción.
+
+- =devel.yaml=: servicios utilizados en desarrollo local.
+
+- =prod.yaml=: servicios utilzados en producción.
+
+Configuracion especifica a Odoo está dentro de =odoo/=.
+
+El uso de este proyecto esta documetnado en [[https://github.com/Tecnativa/doodba-copier-template/blob/main/docs/daily-usage.md][Daily Usage]]. Hay varios consejos útiles en la lista de Frequently Asked Questions ([[https://github.com/Tecnativa/doodba-copier-template/blob/main/docs/faq.md][FAQ]]).
+
+Al final de la instalación, Copier ejecutara dos tasks con invoke [ref]:
+- =invoke after-update=, para ajustar permisos de algunos archivos.
+- =invoke develop=, para crear proyecto de VS Code.
+
+Una vez finalizado Copier, podemos commit el resultado:
+
+#+begin_src
+cd aly-decomovil
+git add .
+git commit -m "Initial commit"
+#+end_src
+
+Pre-commit probablemente va a encontrar algunas cosas en el código genrado, y va a haber hecho cambios.
+
+Stage y commit de nuevo
+
+#+begin_src
+git add .
+git commit -m "Initial commit"
+#+end_src
+
+** Github setup
+
+Crear repositorio en [[https://github.com/orgs/unifica-ai/repositories][Github]] llamado =aly-decomovil=
+
+Luego
+
+#+begin_src 
+git remote add origin git@github.com:unifica-ai/aly-decomovil.git
+git push -u origin main
+#+end_src
+
+** Extendiendo el proyecto
+
+El proximo paso es extender el proyecto con adiciones de Unifica
+
+#+begin_src
+copier copy --UNSAFE --answers-file=.copier-answers-stack.yml  gh:unifica-ai/stack-copier-template .  
+#+end_src
+
+- name of this stack
+  - =decomovil=
+
+- odoo version
+  - /la misma que escogimos antes .../
+
+- postgres_version
+  - /la misma que escogimos antes .../
+
+Esto debería de crear algunos archivos adicionales:
+- github workflow
+- post-create script
+- =addons.yml=
+
+Seguir los pasos de "manual touch up" en el README.md de =unifica-ai/stack-copier-template=, si es que hay. (Estos pasos están en proceso de automatizar.)
+
+** Encriptar secrets
+
+Revisar que tu llave pública de AGE esté en =.docker/sops.yml=, luego
+
+#+begin_src
+inv encrypt-secrets  
+#+end_src
+
+El directorio =.docker= debería contener archivos `.env.encrypted`. Estos deben ser versionados con git junto al código.
+
+** Copiar private keys
+
+Para poder usar los private module repos, se necesitan sus deploy keys.
+
+Poner los private keys en =odoo/custom/ssh=.
+
+** Correr localmente
+
+El archivo =README.md= del proyecto
+
+#+begin_src
+inv img-build
+inv git-aggregate
+inv install-all-addons  
+inv start  
+#+end_src
+
+Deberias poder entrar a =localhost:8069= y entrar con =admin= / =adimn=.
+
+** Revisar build + pin docker tag
+
+Debería haber una imagen
+
+Revisar los git tags creados. Uno debería contener los primeros 7 dígitos del SHA del último commit.
+
+En =prod.yml=, agregar una linea con este =image= al servicio =odoo=: (remplazando el SHA)
+
+#+begin_src yaml
+services:
+  odoo:
+    extends:
+      file: common.yaml
+      service: odoo
+    image: ghcr.io/unifica-ai/aly-suite-v16-crm:sha-0400cdb # <-- esta linea
+    restart: unless-stopped
+#+end_src
+
+#+begin_src shell
+  git commit -m "Deploy 0400cdb"
+  git push origin main
+#+end_src
+
+Esto nos ayudará a asegurar que lo que se lanza en producción corresponde exactamente a este commit, eliminando una clase de bugs difíciles de encontrar.
+
+** Correr en aiora (opcional)
+
+Utilizar ssh agent personal en aiora:
+
+#+begin_src
+Host aiora
+  ForwardAgent yes  
+#+end_src
+
+
+#+begin_src
+ssh aiora
+#+end_src
+
+Este comando deberia ser exitoso:
+#+begin_src
+ssh -T git@github.com
+#+end_src
+
+Clonar repositorio
+
+#+begin_src
+  git clone git@github.com
+  echo "<MY AGE PRIVATE KEY>" | inv decrypt-secrets -p -
+#+end_src
+
+Si hay contenedores, entrar proyecto y correr =inv stop=. Luego
+
+#+begin_src shell
+  inv img-build git-aggregate install-all-addons start
+#+end_src
+
+** Lanzar a produccion
+
+=/etc/hosts= deberia contener:
+
+#+begin_example
+// Aly Servers
+
+3.150.88.242 aly-ng-01
+3.133.29.90  aly-ng-02
+#+end_example
+
+Para escoger cual servidor deberia contener la aplicacion, revisamos el memory usage con =htop=.
+
+- Si el memory usage es menor a 70%, podemos usar ese servidor.
+- Si el memory usage es mayor al 70%, buscamos otro servidor.
+- Si no hay ninguno, creamos un servidor nuevo en la consola de AWS
+
+** Server setup
+
+Si es un nuevo servidor, continuar leyendo. Si no, saltar a la siguiente seccion.
+
+Lanzar servidor en consola de AWS.
+
+#+begin_src shell
+scp scripts/server-setup.sh aln-ng-01:
+ssh admin@aly-ng-01
+sudo ./server-setup.sh
+#+end_src
+
+Lanzar el inverse proxy
+
+#+begin_src shell
+scp inverseproxy.yaml aly-ng-01:
+docker compose -p inverseproxy -f inverseproxy.yml up -d
+#+end_src
+
+Crear un Personal Access Token (classic) en Github
+
+#+begin_src shell
+echo "ghp_BRp..." | docker login ghcr.io -u kpassapk --password-stdin
+#+end_src
+
+Intentar bajar la imagen
+
+#+begin_src shell
+docker pull ghcr.io/unifica-ai/aly-suite-v18-demo:latest  
+#+end_src
+
+** DNS setup
+
+Set up an A record in CLoudflare pointing to the server.
+
+** Running the app
+
+=.ssh/config=:
+
+#+begin_src example
+Host aly-ng-01
+     User app
+
+Host aly-ng-02
+     User app 
+#+end_src
+
+Revisar =scripts/app-setup.sh.=
+
+Copiar al servidor donde queremos hacer deploy
+
+#+begin_src shell
+scp scripts/app-setup.sh aly-ng-01:
+#+end_src
+
+#+begin_src shell
+ssh aly-ng-01
+./app-setup.sh aly-decomovil
+#+end_src
+
+Esto creará un directorio =aly-decomovil= y un repositorio vacío (bare) en =aly-decomovil/repo.git=.
+
+Salir de servidor agregar remote:
+
+#+begin_src shell
+git remote add production app@aly-ng-01:aly-decomovil/repo.git
+git push production main
+#+end_src
+
+Entrar a servidor
+
+#+begin_src
+ssh aly-ng-01
+cd aly-decomovil
+#+end_src
+
+#+begin_src shell
+ln -s prod.yaml docker-compose.yml
+#+end_src
+
+List databases. We keep this container invisible from traefik, since it is a one-off task.
+
+#+begin_src shell
+docker compose run --rm -l traefik.enable=false odoo click-odoo-listdb
+#+end_src
+
+Create a database.
+
+#+begin_src shell
+docker compose run --rm -l traefik.enable=false odoo --stop-after-init -i base
+#+end_src
+
+List databases again. (See above.) You should see =prod=.
+
+#+begin_src
+docker compose up -d
+#+end_src
+
+Wait a few minutes, then visit =decomovil.aly-ai.com=.
+
+Log in as 'admin' / 'admin'
+
+Change admin password
+
+** Run post-create script
+
+We want to apply some one-time changes to the instance.
+
+#+begin_src shell
+docker compose run --rm odoo click-odoo custom/scripts/stack-post-create.py
+#+end_src
+
+If running a multi-tenant instance, you will want to target a single database using =-d=:
+
+#+begin_src shell
+docker compose run --rm odoo click-odoo -d anastore custom/scripts/stack-post-create.py
+#+end_src
+
+** Back up database
+
+Bajar servidor de Odoo temporalmente
+
+#+begin_src
+docker compose stop odoo
+#+end_src
+
+#+begin_src
+docker compose exec backup /etc/periodic/daily/jobrunner
+#+end_src
+
+Chequear Ops en groups.google.com. Agregarse al grupo de ops@aly-ai.com si es necesario.
+
+** Crear una instancia de pruebas
+
+Crear un remote de pruebas en servidor:
+
+#+begin_src shell
+ssh aly-ng-01
+./app-setup aly-decomovil-test
+#+end_src
+
+De manera similar a como hicimos con =prod.yaml=, agregar linea con el SHA a =test.yaml=
+
+#+begin_src yaml
+services:
+  odoo:
+    extends:
+      file: common.yaml
+      service: odoo
+    image: ghcr.io/unifica-ai/aly-suite-v16-crm:sha-0400cdb # <-- esta linea
+    restart: unless-stopped
+#+end_src
+
+Agregarlo en git:
+
+#+begin_src shell
+  git add test.yaml
+  git commit -m "Test 0400cdb"
+  git remote add test app@aly-ng-01:aly-decomovil-test/repo.git
+  git push origin main
+  git push test main
+#+end_src
+
+** Cargar DB de producción a test.yaml
+
+En servidor, dentro de proyecto test, vamos a temporalmente levantar el servicio de backup:
+
+#+begin_src
+docker compose -f prod.yaml up backup
+#+end_src
+
+Restaurar el ultimo backup:
+
+#+begin_src shell
+  docker compose -f prod.yaml exec backup restore --time $(date -u +"%Y%m%dT%H%M%SZ") --force
+
+  docker compose -f prod.yaml exec backup createdb  
+
+  docker compose -f prod.yaml exec backup sh -c 'psql -f $SRC/$PGDATABASE.sql'  
+#+end_src
+
+Eliminar el contenedor de backup:
+
+#+begin_src shell
+docker compose -f prod.yaml stop backup  
+#+end_src
+
+#+begin_src shell
+docker compose up -d  
+#+end_src
+
+Entrar a =decomovil-test.aly-ai.com=
+
+** Pedir aprobacion de UAT
+
+Invitar a usuario de UAT y conseguir aprobacion de este nuevo stack.
+
+Revisar
+- funcionalidad basica
+- templates de correos con Mailhog
+- etc.  
+
