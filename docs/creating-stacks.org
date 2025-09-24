@@ -331,6 +331,13 @@ Clonar repositorio
   echo "<MY AGE PRIVATE KEY>" | inv decrypt-secrets -p -
 #+end_src
 
+Copy the deploy keys for the private repos
+
+#+begin_src
+scp odoo/custom/ssh/aly-web-2509 aiora:aly-kpassapk/odoo/custom/ssh
+scp odoo/custom/ssh/aly-payments-2509 aiora:aly-kpassapk/odoo/custom/ssh
+#+end_src
+
 Si hay contenedores, entrar proyecto y correr =inv stop=. Luego
 
 #+begin_src shell

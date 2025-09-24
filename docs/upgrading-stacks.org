@@ -1,0 +1,95 @@
+#+title: Operaciones frecuentes
+
+* Subir versino de Odoo
+
+Use Copier update. TODO.
+
+- Crear branch
+- Lanzar instancia de pruebas desde ese branch
+- Copier update
+- Correr localmente
+- Arreglar modulos
+- Correr en instancia de pruebas    
+    
+* Agregar mdoulos a lista de apps
+
+- Crear branch
+- Agregar a addons.yaml
+  - OCA
+  - Privada
+  - Otro
+
+** Crear branch y PR
+
+Tomar nota de el tags (será como =pr-2=).
+
+** Crear instancia de pruebas
+
+De manera similar a como hicimos con =prod.yaml=, agregar linea con el SHA a =test.yaml=
+
+#+begin_src yaml
+services:
+  odoo:
+    extends:
+      file: common.yaml
+      service: odoo
+    image: ghcr.io/unifica-ai/aly-suite-v16-crm:pr-2 # <-- esta linea
+    restart: unless-stopped
+#+end_src
+
+Agregarlo en git:
+
+#+begin_src shell
+  git add test.yaml
+  git commit -m "Test 0400cdb"
+  git remote add test app@aly-ng-01:aly-decomovil-test/repo.git
+  git push test main
+#+end_src
+
+** Cargar DB de producción a test.yaml
+
+En servidor, dentro de proyecto test, vamos a temporalmente levantar el servicio de backup:
+
+#+begin_src
+docker compose -f prod.yaml up backup
+#+end_src
+
+Restaurar el ultimo backup:
+
+#+begin_src shell
+  docker compose -f prod.yaml exec backup restore --time $(date -u +"%Y%m%dT%H%M%SZ") --force
+
+  docker compose -f prod.yaml exec backup createdb  
+
+  docker compose -f prod.yaml exec backup sh -c 'psql -f $SRC/$PGDATABASE.sql'  
+#+end_src
+
+Eliminar el contenedor de backup:
+
+#+begin_src shell
+docker compose -f prod.yaml stop backup  
+#+end_src
+
+#+begin_src shell
+docker compose up -d  
+#+end_src
+
+Entrar a =decomovil-test.aly-ai.com=
+
+** Pedir aprobacion de UAT
+
+Invitar a usuario de UAT y conseguir aprobacion de este nuevo stack.
+
+Revisar
+- funcionalidad basica
+- templates de correos con Mailhog
+- etc.
+
+
+#+begin_src
+  ./app-setup.sh crm-test
+#+end_src
+
+* Dependencias
+  - pip
+  - apt
