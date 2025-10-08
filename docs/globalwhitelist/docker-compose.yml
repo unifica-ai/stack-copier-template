@@ -1,0 +1,71 @@
+version: "2.1"
+
+networks:
+  public:
+    driver_opts:
+      encrypted: 1
+  shared:
+    internal: ${DOODBA_NETWORK_INTERNAL-true}
+    driver_opts:
+      encrypted: 1
+
+services:
+  cdnjs_cloudflare_com:
+    image: ghcr.io/tecnativa/docker-whitelist
+    restart: unless-stopped
+    networks:
+      public:
+      shared:
+        aliases:
+          - "cdnjs.cloudflare.com"
+    environment:
+      TARGET: "cdnjs.cloudflare.com"
+      PRE_RESOLVE: 1
+
+  fonts_googleapis_com:
+    image: ghcr.io/tecnativa/docker-whitelist
+    restart: unless-stopped
+    networks:
+      public:
+      shared:
+        aliases:
+          - "fonts.googleapis.com"
+    environment:
+      TARGET: "fonts.googleapis.com"
+      PRE_RESOLVE: 1
+
+  fonts_gstatic_com:
+    image: ghcr.io/tecnativa/docker-whitelist
+    restart: unless-stopped
+    networks:
+      public:
+      shared:
+        aliases:
+          - "fonts.gstatic.com"
+    environment:
+      TARGET: "fonts.gstatic.com"
+      PRE_RESOLVE: 1
+
+  www_google_com:
+    image: ghcr.io/tecnativa/docker-whitelist
+    restart: unless-stopped
+    networks:
+      public:
+      shared:
+        aliases:
+          - "www.google.com"
+    environment:
+      TARGET: "www.google.com"
+      PRE_RESOLVE: 1
+
+  www_gravatar_com:
+    image: ghcr.io/tecnativa/docker-whitelist
+    restart: unless-stopped
+    networks:
+      public:
+      shared:
+        aliases:
+          - "www.gravatar.com"
+    environment:
+      TARGET: "www.gravatar.com"
+      PRE_RESOLVE: 1

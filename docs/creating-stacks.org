@@ -529,27 +529,36 @@ Agregarlo en git:
 En servidor, dentro de proyecto test, vamos a temporalmente levantar el servicio de backup:
 
 #+begin_src
-docker compose -f prod.yaml up backup
+docker compose -f prod.yaml up -d backup
 #+end_src
 
 Restaurar el ultimo backup:
 
 #+begin_src shell
   docker compose -f prod.yaml exec backup restore --time $(date -u +"%Y%m%dT%H%M%SZ") --force
+#+end_src
 
+DANGER ZONE
+
+#+begin_src shell
+  docker compose -f prod.yaml exec backup dropdb prod
+#+end_src
+
+
+#+begin_src shell
   docker compose -f prod.yaml exec backup createdb  
 
-  docker compose -f prod.yaml exec backup sh -c 'psql -f $SRC/$PGDATABASE.sql'  
+  docker compose -f prod.yaml exec backup sh -c 'psql -f $SRC/$PGDATABASE.sql'    
 #+end_src
 
 Eliminar el contenedor de backup:
 
 #+begin_src shell
-docker compose -f prod.yaml stop backup  
+docker compose -f prod.yaml down backup  
 #+end_src
 
 #+begin_src shell
-docker compose up -d  
+docker compose up -d
 #+end_src
 
 Entrar a =decomovil-test.aly-ai.com=
